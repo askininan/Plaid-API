@@ -1,3 +1,5 @@
+from unicodedata import name
+from attr import Attribute
 from constructs import Construct
 from aws_cdk import (
     Duration,
@@ -20,7 +22,11 @@ class PlaidApiStack(Stack):
             id="plaid_content_table",
             removal_policy=RemovalPolicy.DESTROY,
             partition_key=dynamodb.Attribute(
-                name="id", 
+                name="transaction_id", 
+                type=dynamodb.AttributeType.STRING
+            ),
+            sort_key=dynamodb.Attribute(
+                name="name",
                 type=dynamodb.AttributeType.STRING
             )
         )
@@ -35,6 +41,17 @@ class PlaidApiStack(Stack):
             runtime=lambda_.Runtime.PYTHON_3_9,
         )
 
+        # Deploy post_handler lambda function
+        get_function = lambda_.Function(
+            self, 
+            id="get_handler",
+            code=lambda_.Code.from_asset("./get_handler"),
+            handler="get_handler.lambda_handler",
+            runtime=lambda_.Runtime.PYTHON_3_9,
+        )
+
+
+
         # Grant permission to post_funtion to write ddb table
         table_ddb.grant(post_function, "dynamodb:PutItem")
 
@@ -44,9 +61,14 @@ class PlaidApiStack(Stack):
             "Plaid-API",  
         )
 
-        #Create post resource in APIGW
-        post_apiResource = api.root.add_resource("post_apiResource")
+        # Create post resource in APIGW
+        apiResource = api.root.add_resource("apiResource")
 
-        #Post_handler lambda function and APIGW integration
+        # Post_handler lambda function and APIGW integration
         post_content_integration = apigw.LambdaIntegration(post_function)
-        post_apiResource.add_method("POST", post_content_integration)
+        apiResource.add_method("POST", post_content_integration)
+
+
+        # Get_handler lambda function and APIGW integration
+        get_content_integration = apigw.LambdaIntegration(get_function)
+        apiResource.add_method("GET", get_content_integration)

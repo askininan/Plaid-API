@@ -1,9 +1,13 @@
 import json
 import boto3
+import dotenv
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+TABLE_NAME=os.getenv("TABLE_NAME")
+
 
 def lambda_handler(event, context):
     
@@ -14,7 +18,7 @@ def lambda_handler(event, context):
     dynamodb = boto3.resource('dynamodb')
     
     # Set dynamodb table name variable
-    ddbTableName = os.getenv("TABLE_NAME")
+    ddbTableName = TABLE_NAME
     table = dynamodb.Table(ddbTableName)
 
     # Write the content to ddb database
